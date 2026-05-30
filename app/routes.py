@@ -1,0 +1,404 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_user, logout_user, login_required, current_user
+from app.models import db, User, LostItem, FoundItem, Claim
+from datetime import datetime
+from sqlalchemy import or_, and_
+
+# Authentication routes
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        real_name = request.form.get('real_name')
+        role = request.form.get('role', 'student')
+        student_id = request.form.get('student_id')
+        staff_id = request.form.get('staff_id')
+        
+        # 驗證身份
+        if role == 'student' and not student_id:
+            flash('學生必須填寫學號', 'error')
+            return redirect(url_for('auth.register'))
+        
+        if role == 'staff' and not staff_id:
+            flash('教職員必須填寫編號', 'error')
+            return redirect(url_for('auth.register'))
+        
+        if User.query.filter_by(username=username).first():
+            flash('用戶名已存在', 'error')
+            return redirect(url_for('auth.register'))
+        
+        if User.query.filter_by(email=email).first():
+            flash('電郵已被使用', 'error')
+            return redirect(url_for('auth.register'))
+        
+        # 檢查學號或編號是否重複
+        if student_id and User.query.filter_by(student_id=student_id).first():
+            flash('學號已被使用', 'error')
+            return redirect(url_for('auth.register'))
+        
+        if staff_id and User.query.filter_by(staff_id=staff_id).first():
+            flash('教職員編號已被使用', 'error')
+            return redirect(url_for('auth.register'))
+        
+        user = User(
+            username=username, 
+            email=email, 
+            real_name=real_name, 
+            role=role, 
+            student_id=student_id if role == 'student' else None,
+            staff_id=staff_id if role == 'staff' else None
+        )
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('註冊成功，請登入', 'success')
+        return redirect(url_for('auth.login'))
+    
+    return render_template('auth/register.html')
+
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('main.index'))
+        else:
+            flash('用戶名或密碼錯誤', 'error')
+    
+    return render_template('auth/login.html')
+
+
+@auth_bp.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('已登出', 'success')
+    return redirect(url_for('main.index'))
+
+
+# Main routes
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/')
+def index():
+    lost_count = LostItem.query.filter_by(status='lost').count()
+    found_count = FoundItem.query.filter_by(status='available').count()
+    return render_template('index.html', lost_count=lost_count, found_count=found_count)
+
+
+@main_bp.route('/dashboard')
+@login_required
+def dashboard():
+    my_lost = LostItem.query.filter_by(reporter_id=current_user.id).all()
+    my_found = FoundItem.query.filter_by(finder_id=current_user.id).all()
+    my_claims = Claim.query.filter_by(claimer_id=current_user.id).all()
+    
+    return render_template('dashboard.html', 
+                         my_lost=my_lost, 
+                         my_found=my_found,
+                         my_claims=my_claims)
+
+
+# Lost items routes
+lost_items_bp = Blueprint('lost_items', __name__, url_prefix='/lost')
+
+@lost_items_bp.route('/list')
+def list_lost():
+    page = request.args.get('page', 1, type=int)
+    category = request.args.get('category', '')
+    search = request.args.get('search', '')
+    
+    query = LostItem.query.filter_by(status='lost')
+    
+    if category:
+        query = query.filter_by(category=category)
+    
+    if search:
+        query = query.filter(or_(
+            LostItem.title.ilike(f'%{search}%'),
+            LostItem.description.ilike(f'%{search}%'),
+            LostItem.location.ilike(f'%{search}%')
+        ))
+    
+    items = query.order_by(LostItem.created_at.desc()).paginate(page=page, per_page=10)
+    
+    return render_template('lost/list.html', items=items, category=category, search=search)
+
+
+@lost_items_bp.route('/detail/<int:item_id>')
+def detail_lost(item_id):
+    item = LostItem.query.get_or_404(item_id)
+    matching_found = FoundItem.query.filter_by(status='available', category=item.category).limit(5).all()
+    
+    return render_template('lost/detail.html', item=item, matching_found=matching_found)
+
+
+@lost_items_bp.route('/report', methods=['GET', 'POST'])
+@login_required
+def report_lost():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        category = request.form.get('category')
+        location = request.form.get('location')
+        lost_date = request.form.get('lost_date')
+        contact_phone = request.form.get('contact_phone')
+        
+        try:
+            lost_date = datetime.fromisoformat(lost_date)
+        except:
+            flash('日期格式錯誤', 'error')
+            return redirect(url_for('lost_items.report_lost'))
+        
+        item = LostItem(
+            title=title,
+            description=description,
+            category=category,
+            location=location,
+            lost_date=lost_date,
+            reporter_id=current_user.id,
+            contact_phone=contact_phone
+        )
+        
+        db.session.add(item)
+        db.session.commit()
+        
+        flash('失物報告已提交', 'success')
+        return redirect(url_for('main.dashboard'))
+    
+    categories = ['電話', '錢包', '鑰匙', '衣服', '眼鏡', '書包', '其他']
+    return render_template('lost/report.html', categories=categories)
+
+
+@lost_items_bp.route('/edit/<int:item_id>', methods=['GET', 'POST'])
+@login_required
+def edit_lost(item_id):
+    item = LostItem.query.get_or_404(item_id)
+    
+    if item.reporter_id != current_user.id and current_user.role != 'admin':
+        flash('您沒有權限編輯此項目', 'error')
+        return redirect(url_for('lost_items.detail_lost', item_id=item_id))
+    
+    if request.method == 'POST':
+        item.title = request.form.get('title')
+        item.description = request.form.get('description')
+        item.category = request.form.get('category')
+        item.location = request.form.get('location')
+        item.contact_phone = request.form.get('contact_phone')
+        item.status = request.form.get('status')
+        
+        db.session.commit()
+        flash('失物信息已更新', 'success')
+        return redirect(url_for('lost_items.detail_lost', item_id=item_id))
+    
+    categories = ['電話', '錢包', '鑰匙', '衣服', '眼鏡', '書包', '其他']
+    return render_template('lost/edit.html', item=item, categories=categories)
+
+
+@lost_items_bp.route('/delete/<int:item_id>', methods=['POST'])
+@login_required
+def delete_lost(item_id):
+    item = LostItem.query.get_or_404(item_id)
+    
+    if item.reporter_id != current_user.id and current_user.role != 'admin':
+        flash('您沒有權限刪除此項目', 'error')
+    else:
+        db.session.delete(item)
+        db.session.commit()
+        flash('失物記錄已刪除', 'success')
+    
+    return redirect(url_for('main.dashboard'))
+
+
+# Found items routes
+found_items_bp = Blueprint('found_items', __name__, url_prefix='/found')
+
+@found_items_bp.route('/list')
+def list_found():
+    page = request.args.get('page', 1, type=int)
+    category = request.args.get('category', '')
+    search = request.args.get('search', '')
+    
+    query = FoundItem.query.filter_by(status='available')
+    
+    if category:
+        query = query.filter_by(category=category)
+    
+    if search:
+        query = query.filter(or_(
+            FoundItem.title.ilike(f'%{search}%'),
+            FoundItem.description.ilike(f'%{search}%'),
+            FoundItem.location.ilike(f'%{search}%')
+        ))
+    
+    items = query.order_by(FoundItem.created_at.desc()).paginate(page=page, per_page=10)
+    
+    return render_template('found/list.html', items=items, category=category, search=search)
+
+
+@found_items_bp.route('/detail/<int:item_id>')
+def detail_found(item_id):
+    item = FoundItem.query.get_or_404(item_id)
+    return render_template('found/detail.html', item=item)
+
+
+@found_items_bp.route('/report', methods=['GET', 'POST'])
+@login_required
+def report_found():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        category = request.form.get('category')
+        location = request.form.get('location')
+        found_date = request.form.get('found_date')
+        contact_phone = request.form.get('contact_phone')
+        
+        try:
+            found_date = datetime.fromisoformat(found_date)
+        except:
+            flash('日期格式錯誤', 'error')
+            return redirect(url_for('found_items.report_found'))
+        
+        item = FoundItem(
+            title=title,
+            description=description,
+            category=category,
+            location=location,
+            found_date=found_date,
+            finder_id=current_user.id,
+            contact_phone=contact_phone
+        )
+        
+        db.session.add(item)
+        db.session.commit()
+        
+        flash('拾物報告已提交', 'success')
+        return redirect(url_for('main.dashboard'))
+    
+    categories = ['電話', '錢包', '鑰匙', '衣服', '眼鏡', '書包', '其他']
+    return render_template('found/report.html', categories=categories)
+
+
+@found_items_bp.route('/edit/<int:item_id>', methods=['GET', 'POST'])
+@login_required
+def edit_found(item_id):
+    item = FoundItem.query.get_or_404(item_id)
+    
+    if item.finder_id != current_user.id and current_user.role != 'admin':
+        flash('您沒有權限編輯此項目', 'error')
+        return redirect(url_for('found_items.detail_found', item_id=item_id))
+    
+    if request.method == 'POST':
+        item.title = request.form.get('title')
+        item.description = request.form.get('description')
+        item.category = request.form.get('category')
+        item.location = request.form.get('location')
+        item.contact_phone = request.form.get('contact_phone')
+        item.status = request.form.get('status')
+        
+        db.session.commit()
+        flash('拾物信息已更新', 'success')
+        return redirect(url_for('found_items.detail_found', item_id=item_id))
+    
+    categories = ['電話', '錢包', '鑰匙', '衣服', '眼鏡', '書包', '其他']
+    return render_template('found/edit.html', item=item, categories=categories)
+
+
+@found_items_bp.route('/delete/<int:item_id>', methods=['POST'])
+@login_required
+def delete_found(item_id):
+    item = FoundItem.query.get_or_404(item_id)
+    
+    if item.finder_id != current_user.id and current_user.role != 'admin':
+        flash('您沒有權限刪除此項目', 'error')
+    else:
+        db.session.delete(item)
+        db.session.commit()
+        flash('拾物記錄已刪除', 'success')
+    
+    return redirect(url_for('main.dashboard'))
+
+
+# Claims routes
+claims_bp = Blueprint('claims', __name__, url_prefix='/claims')
+
+@claims_bp.route('/create/<int:lost_id>/<int:found_id>', methods=['POST'])
+@login_required
+def create_claim(lost_id, found_id):
+    lost = LostItem.query.get_or_404(lost_id)
+    found = FoundItem.query.get_or_404(found_id)
+    description = request.form.get('description', '')
+    
+    # Check if claim already exists
+    existing = Claim.query.filter_by(
+        lost_item_id=lost_id,
+        found_item_id=found_id,
+        claimer_id=current_user.id
+    ).first()
+    
+    if existing:
+        flash('您已提交過此認領申請', 'warning')
+        return redirect(url_for('lost_items.detail_lost', item_id=lost_id))
+    
+    claim = Claim(
+        lost_item_id=lost_id,
+        found_item_id=found_id,
+        claimer_id=current_user.id,
+        description=description
+    )
+    
+    db.session.add(claim)
+    db.session.commit()
+    
+    flash('認領申請已提交，等待確認', 'success')
+    return redirect(url_for('lost_items.detail_lost', item_id=lost_id))
+
+
+@claims_bp.route('/approve/<int:claim_id>', methods=['POST'])
+@login_required
+def approve_claim(claim_id):
+    claim = Claim.query.get_or_404(claim_id)
+    found = claim.found_item
+    lost = claim.lost_item
+    
+    if found.finder_id != current_user.id:
+        flash('您沒有權限批准此認領', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    claim.status = 'approved'
+    lost.status = 'found'
+    found.status = 'claimed'
+    
+    db.session.commit()
+    flash('認領申請已批准', 'success')
+    
+    return redirect(url_for('main.dashboard'))
+
+
+@claims_bp.route('/reject/<int:claim_id>', methods=['POST'])
+@login_required
+def reject_claim(claim_id):
+    claim = Claim.query.get_or_404(claim_id)
+    found = claim.found_item
+    
+    if found.finder_id != current_user.id:
+        flash('您沒有權限拒絕此認領', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    claim.status = 'rejected'
+    db.session.commit()
+    
+    flash('認領申請已拒絕', 'success')
+    return redirect(url_for('main.dashboard'))

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}拾物查詢 - 學校失物招領系統{% endblock %}
+
+{% block content %}
+<h1>拾物查詢</h1>
+
+<div class="search-bar">
+    <form style="display: flex; gap: 1rem; width: 100%;" method="GET">
+        <input type="text" name="search" placeholder="搜尋物品名稱、地點..." value="{{ search or '' }}">
+        <select name="category">
+            <option value="">所有類別</option>
+            <option value="電話" {% if category == '電話' %}selected{% endif %}>電話</option>
+            <option value="錢包" {% if category == '錢包' %}selected{% endif %}>錢包</option>
+            <option value="鑰匙" {% if category == '鑰匙' %}selected{% endif %}>鑰匙</option>
+            <option value="衣服" {% if category == '衣服' %}selected{% endif %}>衣服</option>
+            <option value="眼鏡" {% if category == '眼鏡' %}selected{% endif %}>眼鏡</option>
+            <option value="書包" {% if category == '書包' %}selected{% endif %}>書包</option>
+            <option value="其他" {% if category == '其他' %}selected{% endif %}>其他</option>
+        </select>
+        <button type="submit" class="btn btn-primary">搜尋</button>
+    </form>
+</div>
+
+{% if items.items %}
+<div class="items-grid">
+    {% for item in items.items %}
+    <div class="item-card">
+        <div class="item-card-body">
+            <div class="item-title">{{ item.title }}</div>
+            <span class="item-category">{{ item.category }}</span>
+            <div class="item-location">{{ item.location }}</div>
+            <div class="item-date">拾獲於 {{ item.found_date.strftime('%Y-%m-%d') }}</div>
+            <div class="item-description">{{ item.description[:100] }}{% if item.description|length > 100 %}...{% endif %}</div>
+            <span class="item-status status-available">等待領取</span>
+            <div class="card-footer">
+                <a href="{{ url_for('found_items.detail_found', item_id=item.id) }}" class="btn btn-primary">查看詳情</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+<div class="pagination">
+    {% if items.has_prev %}
+        <a href="{{ url_for('found_items.list_found', page=items.prev_num, category=category, search=search) }}">« 上一頁</a>
+    {% endif %}
+
+    {% for page_num in items.iter_pages() %}
+        {% if page_num %}
+            {% if page_num == items.page %}
+                <span class="active">{{ page_num }}</span>
+            {% else %}
+                <a href="{{ url_for('found_items.list_found', page=page_num, category=category, search=search) }}">{{ page_num }}</a>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    {% if items.has_next %}
+        <a href="{{ url_for('found_items.list_found', page=items.next_num, category=category, search=search) }}">下一頁 »</a>
+    {% endif %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <p>暫時沒有符合條件的拾物報告</p>
+    {% if current_user.is_authenticated %}
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">報告拾物</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

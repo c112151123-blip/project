@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}我的儀表板 - 學校失物招領系統{% endblock %}
+
+{% block content %}
+<h1>我的儀表板</h1>
+
+<div style="background-color: var(--light-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+    <h3>歡迎，{{ current_user.real_name }}！</h3>
+    <p>身份：{% if current_user.role == 'student' %}學生{% elif current_user.role == 'staff' %}教職員{% else %}管理員{% endif %} 
+    {% if current_user.role == 'student' and current_user.student_id %}(學號: {{ current_user.student_id }}){% endif %}
+    {% if current_user.role == 'staff' and current_user.staff_id %}(編號: {{ current_user.staff_id }}){% endif %}</p>
+</div>
+
+<!-- Lost Items Section -->
+<div class="dashboard-section">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>我的失物報告</h2>
+        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">+ 新增失物</a>
+    </div>
+
+    {% if my_lost %}
+    <table>
+        <thead>
+            <tr>
+                <th>物品名稱</th>
+                <th>類別</th>
+                <th>丟失地點</th>
+                <th>狀態</th>
+                <th>報告日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in my_lost %}
+            <tr>
+                <td><strong>{{ item.title }}</strong></td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.location }}</td>
+                <td>
+                    {% if item.status == 'lost' %}
+                        <span class="item-status status-lost">未找到</span>
+                    {% elif item.status == 'found' %}
+                        <span class="item-status status-found">已找到</span>
+                    {% else %}
+                        <span class="item-status" style="background-color: #d1ecf1; color: #0c5460;">已認領</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <a href="{{ url_for('lost_items.detail_lost', item_id=item.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">詳情</a>
+                    <a href="{{ url_for('lost_items.edit_lost', item_id=item.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">編輯</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>您還沒有報告任何失物</p>
+        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">報告失物</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Found Items Section -->
+<div class="dashboard-section">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>我的拾物報告</h2>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">+ 新增拾物</a>
+    </div>
+
+    {% if my_found %}
+    <table>
+        <thead>
+            <tr>
+                <th>物品名稱</th>
+                <th>類別</th>
+                <th>拾獲地點</th>
+                <th>狀態</th>
+                <th>報告日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in my_found %}
+            <tr>
+                <td><strong>{{ item.title }}</strong></td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.location }}</td>
+                <td>
+                    {% if item.status == 'available' %}
+                        <span class="item-status status-available">等待領取</span>
+                    {% elif item.status == 'claimed' %}
+                        <span class="item-status" style="background-color: #fff3cd; color: #856404;">已被認領</span>
+                    {% else %}
+                        <span class="item-status" style="background-color: #d4edda; color: #155724;">已歸還</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <a href="{{ url_for('found_items.detail_found', item_id=item.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">詳情</a>
+                    <a href="{{ url_for('found_items.edit_found', item_id=item.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">編輯</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>您還沒有報告任何拾物</p>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">報告拾物</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Claims Section -->
+<div class="dashboard-section">
+    <h2>我的認領申請</h2>
+
+    {% if my_claims %}
+    <table>
+        <thead>
+            <tr>
+                <th>失物名稱</th>
+                <th>拾物名稱</th>
+                <th>申請狀態</th>
+                <th>申請日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for claim in my_claims %}
+            <tr>
+                <td><strong>{{ claim.lost_item.title }}</strong></td>
+                <td><strong>{{ claim.found_item.title }}</strong></td>
+                <td>
+                    {% if claim.status == 'pending' %}
+                        <span class="item-status" style="background-color: #fff3cd; color: #856404;">待批准</span>
+                    {% elif claim.status == 'approved' %}
+                        <span class="item-status" style="background-color: #d4edda; color: #155724;">已批准</span>
+                    {% elif claim.status == 'rejected' %}
+                        <span class="item-status" style="background-color: #f8d7da; color: #721c24;">已拒絕</span>
+                    {% else %}
+                        <span class="item-status status-available">已歸還</span>
+                    {% endif %}
+                </td>
+                <td>{{ claim.claimed_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <a href="{{ url_for('lost_items.detail_lost', item_id=claim.lost_item_id) }}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">查看</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>您還沒有提交任何認領申請</p>
+        <a href="{{ url_for('lost_items.list_lost') }}" class="btn btn-primary">查看失物</a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.title }} - 失物詳情{% endblock %}
+
+{% block content %}
+<div class="detail-section">
+    <div class="detail-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1>{{ item.title }}</h1>
+            <span class="item-status status-lost">未找到</span>
+        </div>
+
+        <div class="detail-info">
+            <div class="detail-info-item">
+                <label>類別</label>
+                <p>{{ item.category }}</p>
+            </div>
+            <div class="detail-info-item">
+                <label>丟失地點</label>
+                <p>{{ item.location }}</p>
+            </div>
+            <div class="detail-info-item">
+                <label>丟失日期</label>
+                <p>{{ item.lost_date.strftime('%Y-%m-%d') }}</p>
+            </div>
+            <div class="detail-info-item">
+                <label>報告人</label>
+                <p>{{ item.reporter.real_name }}</p>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label style="font-weight: bold; color: var(--primary-color); display: block; margin-bottom: 0.5rem;">詳細描述</label>
+            <p style="line-height: 1.8;">{{ item.description }}</p>
+        </div>
+
+        <div style="background-color: var(--light-bg); padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+            <label style="font-weight: bold; color: var(--text-color);">联繡電話</label>
+            <p>{{ item.contact_phone or '未提供' }}</p>
+        </div>
+
+        <!-- Matching Found Items -->
+        {% if matching_found %}
+        <div style="border-top: 2px solid var(--light-bg); padding-top: 1.5rem;">
+            <h3 style="color: var(--primary-color); margin-bottom: 1rem;">可能匹配的拾物</h3>
+            <div class="items-grid">
+                {% for found in matching_found %}
+                <div class="item-card">
+                    <div class="item-card-body">
+                        <div class="item-title">{{ found.title }}</div>
+                        <span class="item-category">{{ found.category }}</span>
+                    <div class="item-location">{{ found.location }}</div>
+                    <div class="item-date">拾獲於 {{ found.found_date.strftime('%Y-%m-%d') }}</div>
+                        <div class="item-description">{{ found.description[:80] }}...</div>
+                        <div class="card-footer">
+                            <a href="{{ url_for('found_items.detail_found', item_id=found.id) }}" class="btn btn-primary">查看詳情</a>
+                            {% if current_user.is_authenticated %}
+                                <form method="POST" action="{{ url_for('claims.create_claim', lost_id=item.id, found_id=found.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-success" onclick="return confirm('確定要提交認領申請嗎？');">認領申請</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="card-footer" style="justify-content: space-between; flex-wrap: wrap;">
+            <div>
+                <a href="{{ url_for('lost_items.list_lost') }}" class="btn btn-secondary">返回列表</a>
+            </div>
+            {% if item.reporter_id == current_user.id or current_user.role == 'admin' %}
+            <div>
+                <a href="{{ url_for('lost_items.edit_lost', item_id=item.id) }}" class="btn btn-primary">編輯</a>
+                <form method="POST" action="{{ url_for('lost_items.delete_lost', item_id=item.id) }}" style="display: inline;" onsubmit="return confirm('確定要刪除嗎？');">
+                    <button type="submit" class="btn btn-danger">刪除</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}報告拾物 - 學校失物招領系統{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto;">
+    <div class="card">
+        <div class="card-header">報告拾物</div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="title">物品名稱 *</label>
+                <input type="text" id="title" name="title" required placeholder="例如：藍色手套、金色項鍊">
+            </div>
+
+            <div class="form-group">
+                <label for="category">物品類別 *</label>
+                <select id="category" name="category" required>
+                    <option value="">-- 選擇類別 --</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="location">拾獲地點 *</label>
+                <input type="text" id="location" name="location" required placeholder="例如：宿舍、圖書館、食堂等">
+            </div>
+
+            <div class="form-group">
+                <label for="found_date">拾獲日期 *</label>
+                <input type="datetime-local" id="found_date" name="found_date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">詳細描述 *</label>
+                <textarea id="description" name="description" required placeholder="請詳細描述物品的特徵、顏色、標記、品牌等..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="contact_phone">聯絡電話</label>
+                <input type="tel" id="contact_phone" name="contact_phone" placeholder="供失主聯絡">
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width: 100%;">提交報告</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <a href="{{ url_for('main.dashboard') }}">返回儀表板</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
