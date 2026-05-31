@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}管理員登入 - 學校失物招領系統{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 2rem auto;">
+    <div class="card">
+        <div class="card-header" style="background-color: #c0392b; color: white;">管理員登入</div>
+        
+        <div style="padding: 1.5rem; background-color: #fadbd8; border-radius: 4px; margin-bottom: 1.5rem; font-size: 0.9rem;">
+            <strong>提醒：</strong> 此為管理員專用入口。只有被授權的管理員才能登入。所有登入嘗試都會被記錄。
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="id_number">管理員編號</label>
+                <input type="text" id="id_number" name="id_number" required autofocus 
+                       placeholder="輸入您的管理員編號">
+            </div>
+
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn" style="background-color: #c0392b; color: white; width: 100%;">管理員登入</button>
+        </form>
+
+        <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #ddd;">
+            <p>不是管理員？ <a href="{{ url_for('auth.login') }}">普通用戶登入</a></p>
+            <p style="font-size: 0.85rem; color: #666;">還沒有賬戶？ <a href="{{ url_for('auth.register') }}">立即註冊</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

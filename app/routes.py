@@ -71,6 +71,36 @@ def logout():
     return redirect(url_for('main.index'))
 
 
+@auth_bp.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """管理員登入入口 - 需要額外的安全檢查"""
+    if request.method == 'POST':
+        id_number = request.form.get('id_number')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(id_number=id_number).first()
+        
+        # 驗證用戶存在、密碼正確且為管理員
+        if not user:
+            flash('學號/編號不存在', 'error')
+            return redirect(url_for('auth.admin_login'))
+        
+        if not user.check_password(password):
+            flash('密碼錯誤', 'error')
+            return redirect(url_for('auth.admin_login'))
+        
+        if user.role != 'admin':
+            # 安全日誌：非管理員嘗試通過管理員入口登入
+            flash('您無權訪問管理員入口', 'error')
+            return redirect(url_for('auth.login'))
+        
+        login_user(user)
+        flash('管理員登入成功', 'success')
+        return redirect(url_for('main.index'))
+    
+    return render_template('auth/admin_login.html')
+
+
 # Main routes
 main_bp = Blueprint('main', __name__)
 
@@ -131,9 +161,9 @@ def detail_lost(item_id):
 @lost_items_bp.route('/report', methods=['GET', 'POST'])
 @login_required
 def report_lost():
-    # 只有管理員可以報告失物
-    if current_user.role != 'admin':
-        flash('只有管理員可以上傳遺失物', 'error')
+    # 一般用戶（學生、教職員）可以報告自己遺失的物品
+    if current_user.role == 'admin':
+        flash('管理員不能報告失物', 'error')
         return redirect(url_for('main.index'))
     
     if request.method == 'POST':
@@ -175,9 +205,9 @@ def report_lost():
 def edit_lost(item_id):
     item = LostItem.query.get_or_404(item_id)
     
-    # 只有管理員可以編輯失物
-    if current_user.role != 'admin':
-        flash('只有管理員可以編輯失物', 'error')
+    # 只有報告者（一般用戶）可以編輯自己的失物
+    if item.reporter_id != current_user.id:
+        flash('您沒有權限編輯此項目', 'error')
         return redirect(url_for('lost_items.detail_lost', item_id=item_id))
     
     if request.method == 'POST':
@@ -201,9 +231,9 @@ def edit_lost(item_id):
 def delete_lost(item_id):
     item = LostItem.query.get_or_404(item_id)
     
-    # 只有管理員可以刪除失物
-    if current_user.role != 'admin':
-        flash('只有管理員可以刪除失物', 'error')
+    # 只有報告者可以刪除自己的失物
+    if item.reporter_id != current_user.id:
+        flash('您沒有權限刪除此項目', 'error')
     else:
         db.session.delete(item)
         db.session.commit()

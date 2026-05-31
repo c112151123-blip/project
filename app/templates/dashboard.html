@@ -7,15 +7,15 @@
 
 <div style="background-color: var(--light-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
     <h3>歡迎，{{ current_user.real_name }}！</h3>
-    <p>身份：{% if current_user.role == 'student' %}學生{% elif current_user.role == 'staff' %}教職員{% else %}管理員{% endif %} | 編號：{{ current_user.id_number }}</p>
+    <p>身份：{% if current_user.role == 'student' %}學生{% elif current_user.role == 'staff' %}教職員{% else %}<strong style="color: #c0392b;">系統管理員</strong>{% endif %} | 編號：{{ current_user.id_number }}</p>
 </div>
 
-<!-- Lost Items Section (Only for Admin) -->
-{% if current_user.role == 'admin' %}
+<!-- For General Users: My Lost Items -->
+{% if current_user.role != 'admin' %}
 <div class="dashboard-section">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>管理的失物報告</h2>
-        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">+ 上傳失物</a>
+        <h2>我報告的失物</h2>
+        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">+ 報告新的失物</a>
     </div>
 
     {% if my_lost %}
@@ -56,65 +56,13 @@
     </table>
     {% else %}
     <div class="empty-state">
-        <p>還沒有上傳失物記錄</p>
-        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">上傳失物</a>
+        <p>您還沒有報告任何失物</p>
+        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">報告失物</a>
     </div>
     {% endif %}
 </div>
 
-<!-- Found Items Section (Only for Admin) -->
-<div class="dashboard-section">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>管理的拾物報告</h2>
-        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">+ 上傳拾物</a>
-    </div>
-
-    {% if my_found %}
-    <table>
-        <thead>
-            <tr>
-                <th>物品名稱</th>
-                <th>類別</th>
-                <th>拾獲地點</th>
-                <th>狀態</th>
-                <th>報告日期</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in my_found %}
-            <tr>
-                <td><strong>{{ item.title }}</strong></td>
-                <td>{{ item.category }}</td>
-                <td>{{ item.location }}</td>
-                <td>
-                    {% if item.status == 'available' %}
-                        <span class="item-status status-available">等待領取</span>
-                    {% elif item.status == 'claimed' %}
-                        <span class="item-status" style="background-color: #fff3cd; color: #856404;">已被認領</span>
-                    {% else %}
-                        <span class="item-status" style="background-color: #d4edda; color: #155724;">已歸還</span>
-                    {% endif %}
-                </td>
-                <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
-                <td>
-                    <a href="{{ url_for('found_items.detail_found', item_id=item.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">詳情</a>
-                    <a href="{{ url_for('found_items.edit_found', item_id=item.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">編輯</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="empty-state">
-        <p>還沒有上傳拾物記錄</p>
-        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">上傳拾物</a>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
-
-<!-- Claims Section (For Students and Staff) -->
+<!-- Claims Section -->
 <div class="dashboard-section">
     <h2>我的認領申請</h2>
 
@@ -160,5 +108,64 @@
     </div>
     {% endif %}
 </div>
+
+<!-- For Admin: Management Section -->
+{% else %}
+<div class="dashboard-section" style="border-left: 4px solid #c0392b; padding-left: 1.5rem;">
+    <h2 style="color: #c0392b;">管理員面板</h2>
+    <p>歡迎使用管理員專用面板。您可以在此管理系統中的所有拾物記錄。</p>
+</div>
+
+<!-- Found Items Management -->
+<div class="dashboard-section">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>系統內的拾物</h2>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">+ 上傳新的拾物</a>
+    </div>
+
+    {% if my_found %}
+    <table>
+        <thead>
+            <tr>
+                <th>物品名稱</th>
+                <th>類別</th>
+                <th>拾獲地點</th>
+                <th>狀態</th>
+                <th>上傳日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in my_found %}
+            <tr>
+                <td><strong>{{ item.title }}</strong></td>
+                <td>{{ item.category }}</td>
+                <td>{{ item.location }}</td>
+                <td>
+                    {% if item.status == 'available' %}
+                        <span class="item-status status-available">等待領取</span>
+                    {% elif item.status == 'claimed' %}
+                        <span class="item-status" style="background-color: #fff3cd; color: #856404;">已被認領</span>
+                    {% else %}
+                        <span class="item-status" style="background-color: #d4edda; color: #155724;">已歸還</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <a href="{{ url_for('found_items.detail_found', item_id=item.id) }}" class="btn btn-primary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">詳情</a>
+                    <a href="{{ url_for('found_items.edit_found', item_id=item.id) }}" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;">編輯</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>系統中還沒有拾物記錄</p>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">上傳拾物</a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 {% endblock %}
