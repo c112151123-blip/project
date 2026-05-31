@@ -24,8 +24,11 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
+        return check_password_hash(self.password_hash, password)        
+    def get_all_lost_for_admin(self):
+        if self.role == 'admin':
+            return LostItem.query.order_by(LostItem.created_at.desc()).all()
+        return []
 
 class LostItem(db.Model):
     """失物報告"""

@@ -414,18 +414,38 @@ def approve_claim(claim_id):
     return redirect(url_for('main.dashboard'))
 
 
-@claims_bp.route('/reject/<int:claim_id>', methods=['POST'])
+@claims_bp.route('/returned/<int:claim_id>', methods=['POST'])
 @login_required
-def reject_claim(claim_id):
+def returned_claim(claim_id):
     claim = Claim.query.get_or_404(claim_id)
-    found = claim.found_item
     
-    if found.finder_id != current_user.id:
-        flash('您沒有權限拒絕此認領', 'error')
+    if claim.claimer_id != current_user.id:
+        flash('您沒有權限確認領取此物品', 'error')
         return redirect(url_for('main.dashboard'))
     
-    claim.status = 'rejected'
+    claim.status = 'returned'
+    # 也可以更新失物或拾物的狀態如果需要，但先更新申請狀態
+    claim.found_item.status = 'returned'
+    claim.lost_item.status = 'claimed'
     db.session.commit()
     
-    flash('認領申請已拒絕', 'success')
+    flash('已確認領取，謝謝！', 'success')
     return redirect(url_for('main.dashboard'))
+
+@claims_bp.route('/notify/<int:lost_id>', methods=['POST'])
+@login_required
+def notify_lost(lost_id):
+    lost = LostItem.query.get_or_404(lost_id)
+    
+    if current_user.role != 'admin':
+        flash('只有管理員可以發送通知', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # 這裡可以用寄信的邏輯，但我們先用 flash 模擬寄信通知，並將失物狀態改變，
+    # 代表已經通知
+    lost.status = 'notified'
+    db.session.commit()
+    
+    flash('失物領取通知已寄出（模擬），已通知同學領取！', 'success')
+    return redirect(url_for('main.dashboard'))
+
