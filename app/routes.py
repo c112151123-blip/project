@@ -251,7 +251,7 @@ def list_found():
     category = request.args.get('category', '')
     search = request.args.get('search', '')
     
-    query = FoundItem.query.filter_by(status='available')
+    query = FoundItem.query
     
     if category:
         query = query.filter_by(category=category)
