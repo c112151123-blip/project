@@ -30,6 +30,9 @@ class User(UserMixin, db.Model):
             return LostItem.query.order_by(LostItem.created_at.desc()).all()
         return []
 
+    def get_unclaimed_lost_items(self):
+        return [item for item in self.lost_items if item.status in ['lost', 'notified']]
+
 class LostItem(db.Model):
     """失物報告"""
     id = db.Column(db.Integer, primary_key=True)
