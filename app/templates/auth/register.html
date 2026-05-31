@@ -9,8 +9,9 @@
         
         <form method="POST">
             <div class="form-group">
-                <label for="username">用戶名</label>
-                <input type="text" id="username" name="username" required autofocus>
+                <label for="id_number">學號/編號 *</label>
+                <input type="text" id="id_number" name="id_number" required autofocus 
+                       placeholder="輸入您的學號或教職員編號">
             </div>
 
             <div class="form-group">
@@ -29,16 +30,6 @@
                     <option value="student">學生</option>
                     <option value="staff">教職員</option>
                 </select>
-            </div>
-
-            <div class="form-group">
-                <label for="student_id">學號（學生必填）</label>
-                <input type="text" id="student_id" name="student_id" placeholder="如: STU20260001">
-            </div>
-
-            <div class="form-group">
-                <label for="staff_id">教職員編號（教職員必填）</label>
-                <input type="text" id="staff_id" name="staff_id" placeholder="如: STAFF2026001">
             </div>
 
             <div class="form-group">

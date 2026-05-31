@@ -7,16 +7,15 @@
 
 <div style="background-color: var(--light-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
     <h3>歡迎，{{ current_user.real_name }}！</h3>
-    <p>身份：{% if current_user.role == 'student' %}學生{% elif current_user.role == 'staff' %}教職員{% else %}管理員{% endif %} 
-    {% if current_user.role == 'student' and current_user.student_id %}(學號: {{ current_user.student_id }}){% endif %}
-    {% if current_user.role == 'staff' and current_user.staff_id %}(編號: {{ current_user.staff_id }}){% endif %}</p>
+    <p>身份：{% if current_user.role == 'student' %}學生{% elif current_user.role == 'staff' %}教職員{% else %}管理員{% endif %} | 編號：{{ current_user.id_number }}</p>
 </div>
 
-<!-- Lost Items Section -->
+<!-- Lost Items Section (Only for Admin) -->
+{% if current_user.role == 'admin' %}
 <div class="dashboard-section">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>我的失物報告</h2>
-        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">+ 新增失物</a>
+        <h2>管理的失物報告</h2>
+        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">+ 上傳失物</a>
     </div>
 
     {% if my_lost %}
@@ -57,17 +56,17 @@
     </table>
     {% else %}
     <div class="empty-state">
-        <p>您還沒有報告任何失物</p>
-        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">報告失物</a>
+        <p>還沒有上傳失物記錄</p>
+        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-primary">上傳失物</a>
     </div>
     {% endif %}
 </div>
 
-<!-- Found Items Section -->
+<!-- Found Items Section (Only for Admin) -->
 <div class="dashboard-section">
     <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>我的拾物報告</h2>
-        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">+ 新增拾物</a>
+        <h2>管理的拾物報告</h2>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">+ 上傳拾物</a>
     </div>
 
     {% if my_found %}
@@ -108,13 +107,14 @@
     </table>
     {% else %}
     <div class="empty-state">
-        <p>您還沒有報告任何拾物</p>
-        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">報告拾物</a>
+        <p>還沒有上傳拾物記錄</p>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">上傳拾物</a>
     </div>
     {% endif %}
 </div>
+{% endif %}
 
-<!-- Claims Section -->
+<!-- Claims Section (For Students and Staff) -->
 <div class="dashboard-section">
     <h2>我的認領申請</h2>
 

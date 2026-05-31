@@ -10,47 +10,30 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
+        id_number = request.form.get('id_number')  # 學號或編號
         email = request.form.get('email')
         password = request.form.get('password')
         real_name = request.form.get('real_name')
         role = request.form.get('role', 'student')
-        student_id = request.form.get('student_id')
-        staff_id = request.form.get('staff_id')
         
-        # 驗證身份
-        if role == 'student' and not student_id:
-            flash('學生必須填寫學號', 'error')
+        # 驗證身份編號
+        if not id_number:
+            flash('必須填寫學號或編號', 'error')
             return redirect(url_for('auth.register'))
         
-        if role == 'staff' and not staff_id:
-            flash('教職員必須填寫編號', 'error')
-            return redirect(url_for('auth.register'))
-        
-        if User.query.filter_by(username=username).first():
-            flash('用戶名已存在', 'error')
+        if User.query.filter_by(id_number=id_number).first():
+            flash('此學號或編號已被使用', 'error')
             return redirect(url_for('auth.register'))
         
         if User.query.filter_by(email=email).first():
             flash('電郵已被使用', 'error')
             return redirect(url_for('auth.register'))
         
-        # 檢查學號或編號是否重複
-        if student_id and User.query.filter_by(student_id=student_id).first():
-            flash('學號已被使用', 'error')
-            return redirect(url_for('auth.register'))
-        
-        if staff_id and User.query.filter_by(staff_id=staff_id).first():
-            flash('教職員編號已被使用', 'error')
-            return redirect(url_for('auth.register'))
-        
         user = User(
-            username=username, 
+            id_number=id_number,
             email=email, 
             real_name=real_name, 
-            role=role, 
-            student_id=student_id if role == 'student' else None,
-            staff_id=staff_id if role == 'staff' else None
+            role=role
         )
         user.set_password(password)
         
@@ -66,16 +49,16 @@ def register():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
+        id_number = request.form.get('id_number')  # 學號或編號
         password = request.form.get('password')
         
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(id_number=id_number).first()
         
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('main.index'))
         else:
-            flash('用戶名或密碼錯誤', 'error')
+            flash('學號/編號或密碼錯誤', 'error')
     
     return render_template('auth/login.html')
 
@@ -148,6 +131,11 @@ def detail_lost(item_id):
 @lost_items_bp.route('/report', methods=['GET', 'POST'])
 @login_required
 def report_lost():
+    # 只有管理員可以報告失物
+    if current_user.role != 'admin':
+        flash('只有管理員可以上傳遺失物', 'error')
+        return redirect(url_for('main.index'))
+    
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
@@ -187,8 +175,9 @@ def report_lost():
 def edit_lost(item_id):
     item = LostItem.query.get_or_404(item_id)
     
-    if item.reporter_id != current_user.id and current_user.role != 'admin':
-        flash('您沒有權限編輯此項目', 'error')
+    # 只有管理員可以編輯失物
+    if current_user.role != 'admin':
+        flash('只有管理員可以編輯失物', 'error')
         return redirect(url_for('lost_items.detail_lost', item_id=item_id))
     
     if request.method == 'POST':
@@ -212,8 +201,9 @@ def edit_lost(item_id):
 def delete_lost(item_id):
     item = LostItem.query.get_or_404(item_id)
     
-    if item.reporter_id != current_user.id and current_user.role != 'admin':
-        flash('您沒有權限刪除此項目', 'error')
+    # 只有管理員可以刪除失物
+    if current_user.role != 'admin':
+        flash('只有管理員可以刪除失物', 'error')
     else:
         db.session.delete(item)
         db.session.commit()
@@ -257,6 +247,11 @@ def detail_found(item_id):
 @found_items_bp.route('/report', methods=['GET', 'POST'])
 @login_required
 def report_found():
+    # 只有管理員可以報告拾物
+    if current_user.role != 'admin':
+        flash('只有管理員可以上傳拾物', 'error')
+        return redirect(url_for('main.index'))
+    
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
@@ -296,8 +291,9 @@ def report_found():
 def edit_found(item_id):
     item = FoundItem.query.get_or_404(item_id)
     
-    if item.finder_id != current_user.id and current_user.role != 'admin':
-        flash('您沒有權限編輯此項目', 'error')
+    # 只有管理員可以編輯拾物
+    if current_user.role != 'admin':
+        flash('只有管理員可以編輯拾物', 'error')
         return redirect(url_for('found_items.detail_found', item_id=item_id))
     
     if request.method == 'POST':
@@ -321,8 +317,9 @@ def edit_found(item_id):
 def delete_found(item_id):
     item = FoundItem.query.get_or_404(item_id)
     
-    if item.finder_id != current_user.id and current_user.role != 'admin':
-        flash('您沒有權限刪除此項目', 'error')
+    # 只有管理員可以刪除拾物
+    if current_user.role != 'admin':
+        flash('只有管理員可以刪除拾物', 'error')
     else:
         db.session.delete(item)
         db.session.commit()

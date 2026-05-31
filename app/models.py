@@ -9,13 +9,11 @@ db = SQLAlchemy()
 class User(UserMixin, db.Model):
     """用戶模型"""
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False)  # 所有人都能看到的名字
+    id_number = db.Column(db.String(20), unique=True, nullable=False)  # 學號或教職員編號（用於登錄）
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), default='student')  # student, staff, admin
-    real_name = db.Column(db.String(80), nullable=False)
-    student_id = db.Column(db.String(20), unique=True, nullable=True)  # 學生學號
-    staff_id = db.Column(db.String(20), unique=True, nullable=True)  # 教職員編號
+    role = db.Column(db.String(20), default='student')  # admin, student, staff
+    real_name = db.Column(db.String(80), nullable=False)  # 顯示用的真實姓名
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     lost_items = db.relationship('LostItem', backref='reporter', lazy=True, foreign_keys='LostItem.reporter_id')
