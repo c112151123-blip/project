@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ item.title }} - 拾物詳情{% endblock %}
+{% block title %}{{ item.title }} - 遺失物詳情{% endblock %}
 
 {% block content %}
 <div class="detail-section">
@@ -24,7 +24,7 @@
                 <p>{{ item.found_date.strftime('%Y-%m-%d') }}</p>
             </div>
             <div class="detail-info-item">
-                <label>拾物人</label>
+                <label>上傳者</label>
                 <p>{{ item.finder.real_name }}</p>
             </div>
         </div>
@@ -34,14 +34,33 @@
             <p style="line-height: 1.8;">{{ item.description }}</p>
         </div>
 
-        <div style="background-color: var(--light-bg); padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
-            <label style="font-weight: bold; color: var(--text-color);">联繡電話</label>
-            <p>{{ item.contact_phone or '未提供' }}</p>
+        <div style="background-color: #e8f8f5; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; border-left: 4px solid var(--secondary-color);">
+            <p><strong>提示：</strong>如果這是您丟失的物品，您可以進行「認領登記」。</p>
         </div>
 
-        <div style="background-color: #e8f8f5; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem; border-left: 4px solid var(--secondary-color);">
-            <p><strong>提示：</strong>如果這是您丟失的物品，請提交認領申請。拾物人會根據您提供的識別信息確認。</p>
+        {% if current_user.is_authenticated and current_user.role != 'admin' %}
+        <div style="margin-bottom: 1.5rem;">
+             <form method="POST" action="{{ url_for('claims.create_claim') }}">
+                <input type="hidden" name="found_item_id" value="{{ item.id }}">
+                <div class="form-group">
+                    <label for="lost_item_id">選擇您的協尋登記以認領此物品</label>
+                    <select id="lost_item_id" name="lost_item_id" required>
+                        <option value="">--請選擇您登記的協尋記錄--</option>
+                        {% for lost in current_user.get_unclaimed_lost_items() %}
+                        <option value="{{ lost.id }}">{{ lost.title }} ({{ lost.created_at.strftime('%Y-%m-%d') }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Optional: field for proof description if needed -->
+                <!-- <div class="form-group">
+                    <label for="proof_description">提供識別信息/證明</label>
+                    <textarea id="proof_description" name="proof_description" rows="3" required></textarea>
+                </div> -->
+                <button type="submit" class="btn btn-success">送出認領登記</button>
+                <small style="display:block; margin-top: 5px; color: #666;">（若您尚未登記協尋，請先至「協尋登記」新增記錄）</small>
+            </form>
         </div>
+        {% endif %}
 
         <!-- Actions -->
         <div class="card-footer" style="justify-content: space-between; flex-wrap: wrap;">

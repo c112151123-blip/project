@@ -64,9 +64,9 @@
 
 {% else %}
 <div class="empty-state">
-    <p>暫時沒有符合條件的拾物記錄</p>
+    <p>暫時沒有符合條件的記錄</p>
     {% if current_user.is_authenticated and current_user.role == 'admin' %}
-        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">上傳拾物</a>
+        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">上傳遺失物</a>
     {% endif %}
 </div>
 {% endif %}
