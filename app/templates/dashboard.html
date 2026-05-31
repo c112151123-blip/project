@@ -63,6 +63,60 @@
     {% endif %}
 </div>
 
+<!-- All Claims Section (For Admin) -->
+{% if current_user.role == 'admin' %}
+<div class="dashboard-section" style="margin-top: 2rem;">
+    <h2>所有認領登記管理</h2>
+
+    {% if all_claims %}
+    <table>
+        <thead>
+            <tr>
+                <th>認領人</th>
+                <th>協尋登記名稱</th>
+                <th>遺失物名稱</th>
+                <th>狀態</th>
+                <th>登記時間</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for claim in all_claims %}
+            <tr>
+                <td>{{ claim.claimer.real_name }}</td>
+                <td><a href="{{ url_for('lost_items.detail_lost', item_id=claim.lost_item_id) }}">{{ claim.lost_item.title }}</a></td>
+                <td><a href="{{ url_for('found_items.detail_found', item_id=claim.found_item_id) }}">{{ claim.found_item.title }}</a></td>
+                <td>
+                    {% if claim.status == 'pending' %}
+                        <span class="item-status" style="background-color: #fff3cd; color: #856404;">待審核</span>
+                    {% elif claim.status == 'approved' %}
+                        <span class="item-status" style="background-color: #d4edda; color: #155724;">已允許領回</span>
+                    {% elif claim.status == 'rejected' %}
+                        <span class="item-status" style="background-color: #f8d7da; color: #721c24;">已拒絕</span>
+                    {% else %}
+                        <span class="item-status status-available">已確認領取</span>
+                    {% endif %}
+                </td>
+                <td>{{ claim.claimed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    {% if claim.status == 'pending' %}
+                        <form method="POST" action="{{ url_for('claims.approve_claim', claim_id=claim.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-success" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="return confirm('確定審核通過並允許這名同學領回嗎？');">核准</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>目前沒有任何認領登記</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Claims Section -->
 <div class="dashboard-section">
     <h2>認領登記清單</h2>

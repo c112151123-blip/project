@@ -114,14 +114,19 @@ def index():
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    my_lost = LostItem.query.filter_by(reporter_id=current_user.id).all()
-    my_found = FoundItem.query.filter_by(finder_id=current_user.id).all()
-    my_claims = Claim.query.filter_by(claimer_id=current_user.id).all()
+    my_lost = LostItem.query.filter_by(reporter_id=current_user.id).order_by(LostItem.created_at.desc()).all()
+    my_found = FoundItem.query.filter_by(finder_id=current_user.id).order_by(FoundItem.created_at.desc()).all()
+    my_claims = Claim.query.filter_by(claimer_id=current_user.id).order_by(Claim.claimed_at.desc()).all()
     
+    all_claims = []
+    if current_user.role == 'admin':
+        all_claims = Claim.query.order_by(Claim.claimed_at.desc()).all()
+        
     return render_template('dashboard.html', 
                          my_lost=my_lost, 
                          my_found=my_found,
-                         my_claims=my_claims)
+                         my_claims=my_claims,
+                         all_claims=all_claims)
 
 
 # Lost items routes
