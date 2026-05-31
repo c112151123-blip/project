@@ -361,12 +361,21 @@ def delete_found(item_id):
 # Claims routes
 claims_bp = Blueprint('claims', __name__, url_prefix='/claims')
 
-@claims_bp.route('/create/<int:lost_id>/<int:found_id>', methods=['POST'])
+@claims_bp.route('/create', methods=['POST'])
 @login_required
-def create_claim(lost_id, found_id):
+def create_claim():
+    lost_item_id = request.form.get('lost_item_id')
+    found_item_id = request.form.get('found_item_id')
+    
+    if not lost_item_id or not found_item_id:
+        flash('請選擇協尋記錄', 'danger')
+        return redirect(url_for('found_items.detail_found', item_id=found_item_id))
+        
+    lost_id = int(lost_item_id)
+    found_id = int(found_item_id)
+    
     lost = LostItem.query.get_or_404(lost_id)
     found = FoundItem.query.get_or_404(found_id)
-    description = request.form.get('description', '')
     
     # Check if claim already exists
     existing = Claim.query.filter_by(
@@ -376,21 +385,26 @@ def create_claim(lost_id, found_id):
     ).first()
     
     if existing:
-        flash('您已提交過此認領申請', 'warning')
-        return redirect(url_for('lost_items.detail_lost', item_id=lost_id))
+        flash('您已提交過此認領登記', 'warning')
+        return redirect(url_for('found_items.detail_found', item_id=found_id))
     
     claim = Claim(
         lost_item_id=lost_id,
         found_item_id=found_id,
         claimer_id=current_user.id,
-        description=description
+        proof_description=f'使用者 {current_user.real_name} 認為遺失物 #{found_id} 是他登記的協尋物 #{lost_id}',
+        status='pending'
     )
     
     db.session.add(claim)
+    
+    # Update found item status
+    found.status = 'claimed'
+    
     db.session.commit()
     
-    flash('認領申請已提交，等待確認', 'success')
-    return redirect(url_for('lost_items.detail_lost', item_id=lost_id))
+    flash('認領登記已提交，請等待管理員審核', 'success')
+    return redirect(url_for('main.dashboard'))
 
 
 @claims_bp.route('/approve/<int:claim_id>', methods=['POST'])
