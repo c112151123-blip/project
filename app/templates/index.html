@@ -10,8 +10,11 @@
         <a href="{{ url_for('auth.login') }}" class="btn btn-success">立即登入</a>
         <a href="{{ url_for('auth.register') }}" class="btn btn-secondary">註冊賬戶</a>
     {% else %}
-        <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-warning">報告失物</a>
-        <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">報告拾物</a>
+        {% if current_user.role == 'student' or current_user.role == 'staff' %}
+            <a href="{{ url_for('lost_items.report_lost') }}" class="btn btn-warning">報告失物</a>
+        {% elif current_user.role == 'admin' %}
+            <a href="{{ url_for('found_items.report_found') }}" class="btn btn-success">上傳拾物</a>
+        {% endif %}
     {% endif %}
 </div>
 
@@ -52,12 +55,12 @@
             </ol>
         </div>
         <div>
-            <h3>報告拾物</h3>
+            <h3>上傳拾物 (管理員專用)</h3>
             <ol>
-                <li>登入您的賬戶</li>
-                <li>點擊「報告拾物」</li>
+                <li>使用管理員賬戶登入</li>
+                <li>點擊「上傳拾物」</li>
                 <li>填寫拾物詳細信息</li>
-                <li>等待失主認領</li>
+                <li>審核失主認領申請</li>
             </ol>
         </div>
         <div>

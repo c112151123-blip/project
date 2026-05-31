@@ -28,7 +28,20 @@ def create_app():
     # Create tables
     with app.app_context():
         db.create_all()
-    
+        
+        # 創建預設管理員帳號
+        if not User.query.filter_by(id_number='admin').first():
+            admin_user = User(
+                id_number='admin',
+                email='admin@school.com',
+                real_name='預設管理員',
+                role='admin'
+            )
+            admin_user.set_password('admin')
+            db.session.add(admin_user)
+            db.session.commit()
+            print("初始化：已自動創建預設管理員帳號 (admin/admin)")
+
     # Register blueprints
     from app.routes import auth_bp, main_bp, lost_items_bp, found_items_bp, claims_bp
     app.register_blueprint(auth_bp)
